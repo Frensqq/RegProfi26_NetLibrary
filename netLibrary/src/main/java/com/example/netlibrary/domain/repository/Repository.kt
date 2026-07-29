@@ -1,5 +1,6 @@
 package com.example.netlibrary.domain.repository
 
+import com.example.netlibrary.domain.model.NetworkResult
 import com.example.netlibrary.domain.model.Product
 import com.example.netlibrary.domain.model.Project
 import com.example.netlibrary.domain.model.RequestAuth
@@ -21,33 +22,33 @@ import com.example.netlibrary.domain.model.UsersAuth
 
 interface Repository
 {
-    suspend fun postUser(data: RequestRegister): ResponseRegister
+    suspend fun postUser(data: RequestRegister): NetworkResult<ResponseRegister>
 
-    suspend fun getUser(id: String): User
+    suspend fun getUser(id: String): NetworkResult<User>
 
-    suspend fun patchUser(id: String, data: RequestUser):User
+    suspend fun patchUser(id: String, data: RequestUser):NetworkResult<User>
 
 
-    suspend fun authUser(data: RequestAuth): ResponseAuth
+    suspend fun authUser(data: RequestAuth): NetworkResult<ResponseAuth>
 
-    suspend fun getToken(): UsersAuth
+    suspend fun getToken(): NetworkResult<UsersAuth>
 
     suspend fun deleteToken(id: String)
-    suspend fun getNews(): ResponsesNews
+    suspend fun getNews(): NetworkResult<ResponsesNews>
 
-    suspend fun getProducts(filter: String? = null): ResponseProducts
+    suspend fun getProducts(filter: String? = null): NetworkResult<ResponseProducts>
 
-    suspend fun getProduct(id: String): Product
+    suspend fun getProduct(id: String): NetworkResult<Product>
 
-    suspend fun getProject(): ResponsesProject
+    suspend fun getProject(): NetworkResult<ResponsesProject>
 
-    suspend fun postProject(data: RequestProject): Project
+    suspend fun postProject(data: RequestProject): NetworkResult<Project>
 
-    suspend fun postBucket(data: RequestCart): ResponseCart
+    suspend fun postBucket(data: RequestCart): NetworkResult<ResponseCart>
 
-    suspend fun patchBucket(id:String, data: RequestCart): ResponseCart
-    suspend fun postOrder(data: RequestOrder): ResponseOrder
+    suspend fun patchBucket(id:String, data: RequestCart): NetworkResult<ResponseCart>
+    suspend fun postOrder(data: RequestOrder): NetworkResult<ResponseOrder>
 
-    suspend fun getOrders(filter: String? = null): ResponseOrder
+    suspend fun getOrders(filter: String? = null): NetworkResult<ResponseOrder>
 
 }
