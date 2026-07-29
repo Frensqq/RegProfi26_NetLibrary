@@ -24,4 +24,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "RegProfi26_NetLibrary"
 include(":app")
- 
+include(":netLibrary")
