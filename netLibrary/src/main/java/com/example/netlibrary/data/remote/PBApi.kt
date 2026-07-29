@@ -39,7 +39,7 @@ class PBApi(
 
     private fun buildUrl(path: String): String = "$baseUrl$path"
 
-    suspend fun postUser(data: RequestRegister): HttpResponse {
+    suspend fun postUser(data: RequestRegister): ResponseRegister {
         return client.post(buildUrl("collections/users/records")){
             contentType(ContentType.Application.Json)
             setBody(data)
