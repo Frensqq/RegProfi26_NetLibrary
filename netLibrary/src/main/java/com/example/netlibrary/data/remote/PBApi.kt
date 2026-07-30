@@ -1,6 +1,5 @@
 package com.example.netlibrary.data.remote
 
-import android.net.http.HttpEngine
 import com.example.netlibrary.domain.model.Product
 import com.example.netlibrary.domain.model.Project
 import com.example.netlibrary.domain.model.RequestAuth
@@ -26,16 +25,15 @@ import io.ktor.client.request.parameter
 import io.ktor.client.request.patch
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
-import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
-import okhttp3.RequestBody.Companion.toRequestBody
-import kotlin.collections.mapOf
 
 class PBApi(
     private val client: HttpClient,
     private val baseUrl: String
 ){
+
+    private val okHttpUploader = PBOkHttpUploader()
 
     private fun buildUrl(path: String): String = "$baseUrl$path"
 
@@ -97,12 +95,17 @@ class PBApi(
         ).body()
     }
 
-    suspend fun postProject(data: RequestProject): Project{
-        return client.post(
-            buildUrl("collections/project/records")){
-                contentType(ContentType.Application.Json)
-                setBody(data)
-            }.body()
+    suspend fun postProject(token: String, data: RequestProject): Project{
+        return okHttpUploader.postProjectImg(
+            baseUrl,
+            token,
+            data
+        )
+//        return client.post(
+//            buildUrl("collections/project/records")){
+//                contentType(ContentType.Application.Json)
+//                setBody(data)
+//            }.body()
     }
 
     suspend fun postBucket(data: RequestCart): ResponseCart{

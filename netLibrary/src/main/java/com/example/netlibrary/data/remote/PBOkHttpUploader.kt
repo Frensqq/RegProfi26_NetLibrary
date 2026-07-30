@@ -4,10 +4,8 @@ import android.util.Log
 import com.example.netlibrary.domain.model.Project
 import com.example.netlibrary.domain.model.RequestProject
 import com.google.gson.Gson
-import io.ktor.http.HttpMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.Dispatcher
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
@@ -17,7 +15,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.concurrent.TimeUnit
 import kotlin.jvm.java
 
-class PBOkHttp {
+class PBOkHttpUploader {
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
