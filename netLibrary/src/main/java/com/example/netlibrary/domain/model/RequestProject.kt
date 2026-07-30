@@ -1,5 +1,7 @@
 package com.example.netlibrary.domain.model
 
+import java.io.File
+
 data class RequestProject (
     val title: String,
     val typeProject: String,
@@ -9,5 +11,5 @@ data class RequestProject (
     val gender: String,
     val description_source: String,
     val category: String,
-    val image: String
+    val image: File? = null
 )
