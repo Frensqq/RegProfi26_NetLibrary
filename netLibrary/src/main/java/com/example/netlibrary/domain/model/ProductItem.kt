@@ -1,5 +1,9 @@
 package com.example.netlibrary.domain.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
+
 data class ProductItem(
     val id: String,
     val title: String,

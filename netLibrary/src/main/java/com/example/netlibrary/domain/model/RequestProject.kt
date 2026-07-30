@@ -1,6 +1,8 @@
 package com.example.netlibrary.domain.model
 
+import kotlinx.serialization.Serializable
 import java.io.File
+
 
 data class RequestProject (
     val title: String,

@@ -1,5 +1,9 @@
 package com.example.netlibrary.domain.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
+
 data class ResponseRegister (
     val id: String,
     val collectionId: String,
@@ -7,6 +11,7 @@ data class ResponseRegister (
     val created: String,
     val updated: String,
     val emailVisibility: Boolean,
+    val email: String,
     val firstname: String,
     val lastname: String,
     val secondname: String,

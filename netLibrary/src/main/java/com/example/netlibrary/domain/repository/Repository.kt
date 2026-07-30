@@ -42,7 +42,7 @@ interface Repository
 
     suspend fun getProject(): NetworkResult<ResponsesProject>
 
-    suspend fun postProject(data: RequestProject): NetworkResult<Project>
+    suspend fun postProject(token:String, data: RequestProject): NetworkResult<Project>
 
     suspend fun postBucket(data: RequestCart): NetworkResult<ResponseCart>
 

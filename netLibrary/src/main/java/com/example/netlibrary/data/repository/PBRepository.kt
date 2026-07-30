@@ -120,8 +120,8 @@ class PBRepository(
         api.postOrder(data)
     }
 
-    override suspend fun postProject(data: RequestProject): NetworkResult<Project> = safeApiCall {
-        api.postProject(data)
+    override suspend fun postProject(token:String, data: RequestProject): NetworkResult<Project> = safeApiCall {
+        api.postProject(token, data)
     }
 
     override suspend fun postUser(data: RequestRegister): NetworkResult<ResponseRegister> = safeApiCall {

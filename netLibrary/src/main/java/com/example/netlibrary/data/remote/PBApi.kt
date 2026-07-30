@@ -78,7 +78,7 @@ class PBApi(
 
     suspend fun getProducts(filter: String? = null): ResponseProducts{
         return client.get(
-            buildUrl("collections/news/records")){
+            buildUrl("collections/products/records")){
                 filter?.let { parameter("filter", it) }
         }.body()
     }
