@@ -36,7 +36,7 @@ class PBRepository(
 ): Repository {
 
     private suspend fun <T> safeApiCall(apiCall: suspend () -> T): NetworkResult<T>{
-        if (!networkMonitor.IsConnected()){
+        if (!networkMonitor.isConnected()){
             return NetworkResult.NoInternet
         }
 

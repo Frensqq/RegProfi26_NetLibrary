@@ -11,7 +11,6 @@ data class ResponseRegister (
     val created: String,
     val updated: String,
     val emailVisibility: Boolean,
-    val email: String,
     val firstname: String,
     val lastname: String,
     val secondname: String,

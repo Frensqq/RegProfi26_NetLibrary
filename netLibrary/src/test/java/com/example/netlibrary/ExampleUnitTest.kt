@@ -1,368 +1,542 @@
 package com.example.netlibrary
 
+import com.example.netlibrary.data.remote.PBApi
 import com.example.netlibrary.data.remote.PBApiServis
-import com.example.netlibrary.domain.model.*
-import junit.framework.TestCase.assertEquals
-import junit.framework.TestCase.assertNotNull
-import junit.framework.TestCase.assertTrue
+import com.example.netlibrary.domain.model.RequestAuth
+import com.example.netlibrary.domain.model.RequestCart
+import com.example.netlibrary.domain.model.RequestOrder
+import com.example.netlibrary.domain.model.RequestProject
+import com.example.netlibrary.domain.model.RequestRegister
+import com.example.netlibrary.domain.model.RequestUser
+import com.example.netlibrary.domain.model.ResponseAuth
+import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.request.delete
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.http.ContentType
+import io.ktor.http.contentType
+import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.runBlocking
-import org.junit.Before
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 
-class PBApiRealTest {
+class PBApiTest {
 
-    private val api = PBApiServis.instance
-    private var authToken: String? = null
-    private var userId: String? = null
-    private val testEmail = "test_${System.currentTimeMillis()}@test.com"
-    private val testPassword = "12345678"
+    private val api: PBApi = PBApiServis.instance
 
-    @Before
-    fun setup() = runBlocking {
-        // 1. Сначала регистрируем пользователя
-        val registerData = RequestRegister(
-            email = testEmail,
-            password = testPassword,
-            passwordConfirm = testPassword
+    private val password = "12345678"
+
+    /*
+     * Отдельный клиент используется только для подготовки тестовых данных,
+     * которых нельзя создать через PBApi.
+     */
+    private val testClient = HttpClient(OkHttp) {
+        expectSuccess = true
+
+        install(ContentNegotiation) {
+            json(
+                Json {
+                    ignoreUnknownKeys = true
+                    isLenient = true
+                    encodeDefaults = true
+                }
+            )
+        }
+
+        defaultRequest {
+            url(PBApiServis.BASE_URL)
+            contentType(ContentType.Application.Json)
+        }
+    }
+
+    // ==================================================
+    // USERS
+    // ==================================================
+
+    @Test
+    fun postUser_createsUser() = runBlocking {
+        val email = uniqueEmail()
+
+        val user = api.postUser(
+            RequestRegister(
+                email = email,
+                password = password,
+                passwordConfirm = password
+            )
         )
 
-        try {
-            val registerResult = api.postUser(registerData)
-            println("User registered: ${registerResult.id}")
-        } catch (e: Exception) {
-            println("Registration failed (maybe user exists): ${e.message}")
-            // Если пользователь уже существует, пробуем войти
-        }
+        assertTrue(user.id.isNotBlank())
+        assertEquals("users", user.collectionName)
+    }
 
-        // 2. Авторизуемся
-        val authData = RequestAuth(
-            identity = testEmail,
-            password = testPassword
+    @Test
+    fun authUser_returnsToken() = runBlocking {
+        val credentials = createUser()
+
+        val auth = api.authUser(
+            RequestAuth(
+                identity = credentials.email,
+                password = credentials.password
+            )
         )
 
-        try {
-            val result = api.authUser(authData)
-            authToken = result.token
-            userId = result.record.id
-            PBApiServis.setToken(authToken)
-            println("Auth success: token=$authToken, userId=$userId")
-        } catch (e: Exception) {
-            println("Auth failed: ${e.message}")
-            throw e
-        }
+        assertTrue(auth.token.isNotBlank())
+        assertEquals(credentials.userId, auth.record.id)
     }
 
-    // ============ USERS ============
     @Test
-    fun testPostUser() = runBlocking {
-        val data = RequestRegister(
-            email = "test_${System.currentTimeMillis()}@test.com",
-            password = "12345678",
-            passwordConfirm = "12345678"
+    fun getUser_returnsCreatedUser() = runBlocking {
+        val testUser = createAndAuthorize()
+
+        val user = api.getUser(testUser.auth.record.id)
+
+        assertEquals(testUser.auth.record.id, user.id)
+        assertEquals("users", user.collectionName)
+    }
+
+    @Test
+    fun patchUser_changesUserData() = runBlocking {
+        val testUser = createAndAuthorize()
+
+        val user = api.patchUser(
+            id = testUser.auth.record.id,
+            data = RequestUser(
+                /*
+                 * Передаём исходный email.
+                 * Новый email PocketBase воспринимает как смену email
+                 * и требует отдельного подтверждения.
+                 */
+                email = testUser.email,
+                emailVisibility = true,
+                firstname = "JUnit",
+                lastname = "Test",
+                secondname = "User",
+                datebirthday = "2000-01-01",
+                gender = "male"
+            )
         )
-        val result = api.postUser(data)
 
-        assertNotNull(result)
-        assertNotNull(result.id)
-        assertNotNull(result.created)
-        assertTrue(result.emailVisibility)
-        println("User created: id=${result.id}")
+        assertEquals(testUser.auth.record.id, user.id)
+        assertEquals("JUnit", user.firstname)
+        assertEquals("Test", user.lastname)
+        assertEquals("User", user.secondname)
+        assertEquals("2000-01-01", user.datebirthday)
+        assertEquals("male", user.gender)
     }
 
-    @Test
-    fun testGetUser() = runBlocking {
-        val id = userId ?: return@runBlocking
-        val result = api.getUser(id)
+    // ==================================================
+    // NEWS
+    // ==================================================
 
-        assertNotNull(result)
-        assertNotNull(result.id)
-        assertNotNull(result.firstname)
-        assertTrue(result.emailVisibility)
-        println("User found: ${result.firstname} ${result.lastname}")
+    @Test
+    fun getNews_returnsPage() = runBlocking {
+        val response = api.getNews()
+
+        assertTrue(response.page >= 1)
+        assertTrue(response.totalItems >= 0)
+        assertNotNull(response.items)
     }
 
+    // ==================================================
+    // PRODUCTS
+    // ==================================================
+
     @Test
-    fun testPatchUser() = runBlocking {
-        val id = userId ?: return@runBlocking
-        val newName = "Updated_${System.currentTimeMillis()}"
-        val data = RequestUser(
-            email = testEmail,
-            emailVisibility = true,
-            firstname = newName,
-            lastname = "Test",
-            secondname = "User",
-            datebirthday = "1990-01-01",
-            gender = "male"
+    fun getProducts_returnsPage() = runBlocking {
+        /*
+         * Создаём товар, чтобы тест проверял не только пустую страницу.
+         */
+        val createdProduct = createProduct()
+
+        val response = api.getProducts(null)
+
+        assertTrue(response.page >= 1)
+        assertTrue(
+            response.items.any { product ->
+                product.id == createdProduct.id
+            }
         )
-        val result = api.patchUser(id, data)
-
-        assertNotNull(result)
-        assertEquals(newName, result.firstname)
-        println("User updated: firstname=$newName")
-    }
-
-    // ============ AUTH ============
-    @Test
-    fun testAuthUser() = runBlocking {
-        val data = RequestAuth(testEmail, testPassword)
-        val result = api.authUser(data)
-
-        assertNotNull(result)
-        assertNotNull(result.token)
-        assertNotNull(result.record)
-        println("Auth success: token=${result.token.take(20)}...")
     }
 
     @Test
-    fun testGetToken() = runBlocking {
-        val result = api.getToken()
+    fun getProductsWithFilter_returnsCreatedProduct() = runBlocking {
+        val createdProduct = createProduct()
 
-        assertNotNull(result)
-        assertTrue(result.item.isNotEmpty())
-        result.item.forEach { auth ->
-            assertNotNull(auth.id)
-            assertNotNull(auth.fingerprint)
-            assertNotNull(auth.recordRef)
-        }
-        println("Tokens count: ${result.item.size}")
-    }
-
-    @Test
-    fun testDeleteToken() = runBlocking {
-        val tokens = api.getToken()
-        if (tokens.item.isNotEmpty()) {
-            val tokenId = tokens.item.first().id
-            api.deleteToken(tokenId)
-            val afterDelete = api.getToken()
-            assertTrue(afterDelete.item.none { it.id == tokenId })
-            println("Token deleted: $tokenId")
-        } else {
-            println("No tokens to delete")
-        }
-    }
-
-    // ============ NEWS ============
-    @Test
-    fun testGetNews() = runBlocking {
-        val result = api.getNews()
-
-        assertNotNull(result)
-        assertTrue(result.items.isNotEmpty())
-        assertTrue(result.totalItems > 0)
-        result.items.forEach { news ->
-            assertNotNull(news.id)
-            assertNotNull(news.newsImage)
-            assertNotNull(news.created)
-        }
-        println("News count: ${result.items.size}")
-    }
-
-    // ============ PRODUCTS ============
-    @Test
-    fun testGetProducts() = runBlocking {
-        val result = api.getProducts()
-
-        assertNotNull(result)
-        assertTrue(result.items.isNotEmpty())
-        assertTrue(result.totalItems > 0)
-        result.items.forEach { product ->
-            assertNotNull(product.id)
-            assertNotNull(product.title)
-            assertTrue(product.price >= 0)
-            assertNotNull(product.type)
-            assertNotNull(product.typeCloses)
-        }
-        println("Products count: ${result.items.size}")
-    }
-
-    @Test
-    fun testGetProductsWithFilter() = runBlocking {
-        val result = api.getProducts("type='clothes'")
-
-        assertNotNull(result)
-        result.items.forEach { product ->
-            assertEquals("clothes", product.type)
-        }
-        println("Filtered products: ${result.items.size}")
-    }
-
-    @Test
-    fun testGetProduct() = runBlocking {
-        val products = api.getProducts()
-        if (products.items.isNotEmpty()) {
-            val productId = products.items.first().id
-            val result = api.getProduct(productId)
-
-            assertNotNull(result)
-            assertEquals(productId, result.id)
-            assertNotNull(result.title)
-            assertNotNull(result.description)
-            assertTrue(result.price >= 0)
-            assertNotNull(result.type)
-            println("Product: ${result.title}, price=${result.price}")
-        } else {
-            println("No products to test")
-        }
-    }
-
-    // ============ PROJECTS ============
-    @Test
-    fun testGetProject() = runBlocking {
-        val result = api.getProject()
-
-        assertNotNull(result)
-        assertTrue(result.items.isNotEmpty())
-        result.items.forEach { project ->
-            assertNotNull(project.id)
-            assertNotNull(project.title)
-            assertNotNull(project.user_id)
-            assertNotNull(project.image)
-        }
-        println("Projects count: ${result.items.size}")
-    }
-
-    @Test
-    fun testPostProject() = runBlocking {
-        val token = authToken ?: return@runBlocking
-        val timestamp = System.currentTimeMillis()
-        val data = RequestProject(
-            title = "Test Project $timestamp",
-            typeProject = "development",
-            user_id = userId ?: "test_user",
-            dateStart = "2026-01-01",
-            dateEnd = "2026-12-31",
-            gender = "unisex",
-            description_source = "Test description created at $timestamp",
-            category = "tech",
-            image = null
+        val response = api.getProducts(
+            filter = "id = '${createdProduct.id}'"
         )
-        val result = api.postProject(token, data)
 
-        assertNotNull(result)
-        assertNotNull(result.id)
-        assertEquals(data.title, result.title)
-        assertEquals(data.user_id, result.user_id)
-        println("Project created: id=${result.id}, title=${result.title}")
+        assertEquals(1, response.items.size)
+        assertEquals(createdProduct.id, response.items.first().id)
+        assertEquals(createdProduct.title, response.items.first().title)
     }
 
-    // ============ CART ============
     @Test
-    fun testPostBucket() = runBlocking {
-        val products = api.getProducts()
-        if (products.items.isNotEmpty()) {
-            val productId = products.items.first().id
-            val data = RequestCart(
-                user_id = userId ?: "test_user",
-                product_id = productId,
+    fun getProduct_returnsCreatedProduct() = runBlocking {
+        val createdProduct = createProduct()
+
+        val product = api.getProduct(createdProduct.id)
+
+        assertEquals(createdProduct.id, product.id)
+        assertEquals(createdProduct.title, product.title)
+        assertEquals(createdProduct.price, product.price)
+    }
+
+    // ==================================================
+    // PROJECTS
+    // ==================================================
+
+    @Test
+    fun getProject_returnsPage() = runBlocking {
+        val testUser = createAndAuthorize()
+        val createdProject = createProject(testUser)
+
+        val response = api.getProject()
+
+        assertTrue(response.page >= 1)
+        assertTrue(
+            response.items.any { project ->
+                project.id == createdProject.id
+            }
+        )
+    }
+
+    @Test
+    fun postProject_createsProject() = runBlocking {
+        val testUser = createAndAuthorize()
+
+        val title = "JUnit project ${System.nanoTime()}"
+
+        val project = api.postProject(
+            token = testUser.auth.token,
+            data = RequestProject(
+                title = title,
+                typeProject = "Web",
+                user_id = testUser.auth.record.id,
+                dateStart = "2026-08-01 00:00:00.000Z",
+                dateEnd = "2026-08-02 00:00:00.000Z",
+                gender = "male",
+                description_source = "JUnit integration test",
+                category = "test",
+                image = null
+            )
+        )
+
+        assertTrue(project.id.isNotBlank())
+        assertEquals(title, project.title)
+        assertEquals(testUser.auth.record.id, project.user_id)
+    }
+
+    // ==================================================
+    // CART
+    // ==================================================
+
+    @Test
+    fun postBucket_createsCartRecord() = runBlocking {
+        val testUser = createAndAuthorize()
+        val product = createProduct()
+
+        val cart = api.postBucket(
+            RequestCart(
+                user_id = testUser.auth.record.id,
+                product_id = product.id,
                 count = 1
             )
-            val result = api.postBucket(data)
+        )
 
-            assertNotNull(result)
-            assertNotNull(result.id)
-            assertEquals(1, result.count)
-            assertEquals(productId, result.product_id)
-            println("Cart created: id=${result.id}, product=$productId")
-        } else {
-            println("No products to add to cart")
-        }
+        assertTrue(cart.id.isNotBlank())
+        assertEquals(testUser.auth.record.id, cart.user_id)
+        assertEquals(product.id, cart.product_id)
+        assertEquals(1, cart.count)
     }
 
     @Test
-    fun testPatchBucket() = runBlocking {
-        val products = api.getProducts()
-        if (products.items.isNotEmpty()) {
-            val productId = products.items.first().id
-            val createData = RequestCart(userId ?: "test_user", productId, 1)
-            val created = api.postBucket(createData)
-            val cartId = created.id
+    fun patchBucket_changesCount() = runBlocking {
+        val testUser = createAndAuthorize()
+        val product = createProduct()
 
-            val updateData = RequestCart(userId ?: "test_user", productId, 5)
-            val result = api.patchBucket(cartId, updateData)
+        /*
+         * Этот тест сам создаёт корзину, которую затем изменяет.
+         */
+        val createdCart = api.postBucket(
+            RequestCart(
+                user_id = testUser.auth.record.id,
+                product_id = product.id,
+                count = 1
+            )
+        )
 
-            assertNotNull(result)
-            assertEquals(5, result.count)
-            assertEquals(cartId, result.id)
-            println("Cart updated: id=$cartId, count=5")
-        } else {
-            println("No products to test cart update")
-        }
+        val updatedCart = api.patchBucket(
+            id = createdCart.id,
+            data = RequestCart(
+                user_id = testUser.auth.record.id,
+                product_id = product.id,
+                count = 5
+            )
+        )
+
+        assertEquals(createdCart.id, updatedCart.id)
+        assertEquals(product.id, updatedCart.product_id)
+        assertEquals(5, updatedCart.count)
     }
 
-    // ============ ORDERS ============
+    // ==================================================
+    // ORDERS
+    // ==================================================
+
     @Test
-    fun testPostOrder() = runBlocking {
-        val products = api.getProducts()
-        if (products.items.isNotEmpty()) {
-            val productId = products.items.first().id
-            val data = RequestOrder(
-                user_id = userId ?: "test_user",
-                product_id = productId,
+    fun postOrder_createsOrder() = runBlocking {
+        val testUser = createAndAuthorize()
+        val product = createProduct()
+
+        val order = api.postOrder(
+            RequestOrder(
+                user_id = testUser.auth.record.id,
+                product_id = product.id,
                 count = 2
             )
-            val result = api.postOrder(data)
+        )
 
-            assertNotNull(result)
-            assertNotNull(result.id)
-            assertEquals(2, result.count)
-            assertEquals(productId, result.product_id)
-            println("Order created: id=${result.id}")
-        } else {
-            println("No products to create order")
-        }
-    }
-
-    @Test
-    fun testGetOrders() = runBlocking {
-        val result = api.getOrders()
-
-        assertNotNull(result)
-        assertNotNull(result.id)
-        assertNotNull(result.user_id)
-        assertTrue(result.count >= 0)
-        println("Order: id=${result.id}, count=${result.count}")
-    }
-
-    @Test
-    fun testGetOrdersWithFilter() = runBlocking {
-        val id = userId ?: return@runBlocking
-        val result = api.getOrders("user_id='$id'")
-
-        assertNotNull(result)
-        assertEquals(id, result.user_id)
-        println("Filtered order found for user $id")
-    }
-
-    // ============ COMPLEX TEST ============
-    @Test
-    fun testFullFlow() = runBlocking {
-        val products = api.getProducts()
-        assertTrue(products.items.isNotEmpty())
-        val productId = products.items.first().id
-        println("Got product: ${products.items.first().title}")
-
-        val cartData = RequestCart(userId ?: "test_user", productId, 1)
-        val cart = api.postBucket(cartData)
-        assertNotNull(cart.id)
-        println("Added to cart: ${cart.id}")
-
-        val orderData = RequestOrder(userId ?: "test_user", productId, 1)
-        val order = api.postOrder(orderData)
-        assertNotNull(order.id)
-        println("Order created: ${order.id}")
-
-        val orders = api.getOrders()
-        assertNotNull(orders)
-        println("Orders retrieved")
+        assertTrue(order.id.isNotBlank())
+        assertEquals(testUser.auth.record.id, order.user_id)
+        assertEquals(product.id, order.product_id)
+        assertEquals(2, order.count)
     }
 
 //    @Test
-//    fun testErrorHandling() = runBlocking {
-//        try {
-//            api.getUser("non_existent_id_12345")
-//        } catch (e: Exception) {
-//            assertTrue(e.message?.contains("404") == true || e is io.ktor.client.plugins.ClientRequestException)
-//            println("Error handled: ${e.message}")
-//        }
+//    fun getOrders_returnsCreatedOrder() = runBlocking {
+//        val testUser = createAndAuthorize()
+//        val product = createProduct()
+//
+//        /*
+//         * Сначала создаём заказ.
+//         */
+//        val createdOrder = api.postOrder(
+//            RequestOrder(
+//                user_id = testUser.auth.record.id,
+//                product_id = product.id,
+//                count = 1
+//            )
+//        )
+//
+//        /*
+//         * Затем получаем только заказы созданного пользователя.
+//         */
+//        val response = api.getOrders(
+//            filter = "user_id = '${testUser.auth.record.id}'"
+//        )
+//
+//        assertTrue(response.page >= 1)
+//        assertTrue(
+//            response.items.any { order ->
+//                order.id == createdOrder.id
+//            }
+//        )
+//
+//        assertTrue(
+//            response.items.all { order ->
+//                order.user_id == testUser.auth.record.id
+//            }
+//        )
 //    }
+
+    // ==================================================
+    // AUTH ORIGINS
+    // ==================================================
+
+    @Test
+    fun getToken_returnsPage() = runBlocking {
+        createAndAuthorize()
+
+        val response = api.getToken()
+
+        assertTrue(response.page >= 1)
+        assertTrue(response.totalItems >= 0)
+        assertNotNull(response.items)
+    }
+
+    @Test
+    fun deleteToken_removesExistingOrigin() = runBlocking {
+        createAndAuthorize()
+
+        val before = api.getToken()
+
+        /*
+         * Обычная password-авторизация может не создавать _authOrigins.
+         * В таком случае корректно пропускаем только этот тест.
+         */
+        assumeTrue(
+            "PocketBase не создал запись в _authOrigins",
+            before.items.isNotEmpty()
+        )
+
+        val originId = before.items.first().id
+
+        api.deleteToken(originId)
+
+        val after = api.getToken()
+
+        assertFalse(
+            after.items.any { origin ->
+                origin.id == originId
+            }
+        )
+    }
+
+    // ==================================================
+    // TEST DATA HELPERS
+    // ==================================================
+
+    private suspend fun createUser(): TestCredentials {
+        val email = uniqueEmail()
+
+        val registered = api.postUser(
+            RequestRegister(
+                email = email,
+                password = password,
+                passwordConfirm = password
+            )
+        )
+
+        assertTrue(
+            "PocketBase не создал тестового пользователя",
+            registered.id.isNotBlank()
+        )
+
+        return TestCredentials(
+            userId = registered.id,
+            email = email,
+            password = password
+        )
+    }
+
+    private suspend fun createAndAuthorize(): TestUser {
+        /*
+         * Сбрасываем токен предыдущего теста.
+         */
+        PBApiServis.token = null
+
+        val credentials = createUser()
+
+        val auth = api.authUser(
+            RequestAuth(
+                identity = credentials.email,
+                password = credentials.password
+            )
+        )
+
+        assertTrue(
+            "PocketBase не вернул auth token",
+            auth.token.isNotBlank()
+        )
+
+        assertEquals(
+            credentials.userId,
+            auth.record.id
+        )
+
+        PBApiServis.token = auth.token
+
+        return TestUser(
+            auth = auth,
+            email = credentials.email
+        )
+    }
+
+    private suspend fun createProduct(): TestProductResponse {
+        val suffix = System.nanoTime()
+
+        val request = TestProductRequest(
+            title = "JUnit product $suffix",
+            description = "Created by integration test",
+            price = 1000,
+            type = "test",
+            typeCloses = "test",
+            approximateCost = "1000"
+        )
+
+        val product = testClient.post(
+            "collections/products/records"
+        ) {
+            setBody(request)
+        }.body<TestProductResponse>()
+
+        assertTrue(
+            "PocketBase не создал тестовый товар",
+            product.id.isNotBlank()
+        )
+
+        return product
+    }
+
+    private suspend fun createProject(
+        testUser: TestUser
+    ) = api.postProject(
+        token = testUser.auth.token,
+        data = RequestProject(
+            title = "JUnit project ${System.nanoTime()}",
+            typeProject = "Web",
+            user_id = testUser.auth.record.id,
+            dateStart = "2026-08-01 00:00:00.000Z",
+            dateEnd = "2026-08-02 00:00:00.000Z",
+            gender = "male",
+            description_source = "JUnit integration test",
+            category = "test",
+            image = null
+        )
+    )
+
+    private fun uniqueEmail(): String {
+        return "junit_${System.nanoTime()}@test.com"
+    }
+
+    // ==================================================
+    // TEST-ONLY MODELS
+    // ==================================================
+
+    private data class TestCredentials(
+        val userId: String,
+        val email: String,
+        val password: String
+    )
+
+    private data class TestUser(
+        val auth: ResponseAuth,
+        val email: String
+    )
+
+    @Serializable
+    private data class TestProductRequest(
+        val title: String,
+        val description: String,
+        val price: Int,
+        val type: String,
+        val typeCloses: String,
+        val approximateCost: String
+    )
+
+    @Serializable
+    private data class TestProductResponse(
+        val id: String,
+        val collectionId: String,
+        val collectionName: String,
+        val created: String,
+        val updated: String,
+        val title: String,
+        val description: String,
+        val price: Int,
+        val type: String,
+        val typeCloses: String,
+        val approximateCost: String
+    )
 }

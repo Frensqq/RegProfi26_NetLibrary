@@ -37,7 +37,7 @@ class PBOkHttpUploader {
                     data.description_source
                 )
                 .addFormDataPart(
-                    "avatar",
+                    "image",
                     image.name,
                     image.asRequestBody("image/*".toMediaType())
                 )

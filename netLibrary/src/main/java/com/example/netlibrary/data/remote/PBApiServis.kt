@@ -14,13 +14,15 @@ import kotlinx.serialization.json.Json
 
 object PBApiServis {
 
-    const val BASE_URL = "http://10.0.2.2:8090/api/"
+    const val BASE_URL = "http://127.0.0.1:8090/api/"
 
     var token: String? = null
 
     val instance: PBApi by lazy {
         PBApi(
             HttpClient(OkHttp) {
+                    expectSuccess = true
+
                 install(ContentNegotiation) {
                     json(
                         Json {
