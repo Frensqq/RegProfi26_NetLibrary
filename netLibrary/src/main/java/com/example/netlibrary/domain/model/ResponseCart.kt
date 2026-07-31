@@ -1,5 +1,9 @@
 package com.example.netlibrary.domain.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
+
 data class ResponseCart(
     val id: String,
     val collectionId: String,

@@ -1,7 +1,8 @@
 package com.example.netlibrary.domain.model
 
-import androidx.transition.Visibility
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class RequestUser(
     val email: String,
     val emailVisibility: Boolean,
