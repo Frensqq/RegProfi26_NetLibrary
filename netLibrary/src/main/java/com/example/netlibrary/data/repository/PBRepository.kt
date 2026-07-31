@@ -25,6 +25,7 @@ import com.example.netlibrary.domain.repository.Repository
 import com.example.netlibrary.network.NetworkMonitor
 import io.ktor.client.call.body
 import io.ktor.client.plugins.ClientRequestException
+import io.ktor.client.plugins.ResponseException
 import io.ktor.client.plugins.ServerResponseException
 import okio.IOException
 
@@ -43,23 +44,17 @@ class PBRepository(
             NetworkResult.Success(apiCall())
         } catch (e: IOException){
             NetworkResult.NoInternet
-        } catch (e: ClientRequestException){
+        } catch (e: ResponseException) {
             NetworkResult.Error(
                 Error400(
                     status = e.response.status.value,
-                    message = e.message ?: "Client error",
-                    data = mapOf("raw" to (e.response.body() ?: ""))
+                    message = e.message.toString(),
+                    data = mapOf("raw" to runCatching {
+                        e.response.body<String>()
+                    }.getOrDefault(""))
                 )
             )
-        } catch (e: ServerResponseException){
-            NetworkResult.Error(
-                Error400(
-                    status = e.response.status.value,
-                    message = e.message ?: "Client error",
-                    data = mapOf("raw" to (e.response.body() ?: ""))
-                )
-            )
-        } catch (e: Exception){
+        } catch (e: Exception) {
             NetworkResult.Error(
                 Error400(
                     status = -1,
@@ -69,62 +64,62 @@ class PBRepository(
         }
     }
 
-    override suspend fun authUser(data: RequestAuth): NetworkResult<ResponseAuth> =
+    override suspend fun authUser(data: RequestAuth) =
         safeApiCall { api.authUser(data) }
 
     override suspend fun deleteToken(id: String) {
         safeApiCall { api.deleteToken(id) }
     }
 
-    override suspend fun getNews(): NetworkResult<ResponsesNews> = safeApiCall {
+    override suspend fun getNews()= safeApiCall {
         api.getNews()
     }
 
-    override suspend fun getOrders(filter: String?): NetworkResult<ResponseOrder> = safeApiCall {
+    override suspend fun getOrders(filter: String?)= safeApiCall {
         api.getOrders(filter)
     }
 
-    override suspend fun getProduct(id: String): NetworkResult<Product> = safeApiCall {
+    override suspend fun getProduct(id: String) = safeApiCall {
         api.getProduct(id)
     }
 
-    override suspend fun getProducts(filter: String?): NetworkResult<ResponseProducts> = safeApiCall {
+    override suspend fun getProducts(filter: String?) = safeApiCall {
         api.getProducts(filter)
     }
 
-    override suspend fun getProject(): NetworkResult<ResponsesProject> = safeApiCall {
+    override suspend fun getProject() = safeApiCall {
         api.getProject()
     }
 
-    override suspend fun getToken(): NetworkResult<UsersAuth> = safeApiCall {
+    override suspend fun getToken() = safeApiCall {
         api.getToken()
     }
 
-    override suspend fun getUser(id: String): NetworkResult<User> = safeApiCall {
+    override suspend fun getUser(id: String) = safeApiCall {
         api.getUser(id)
     }
 
-    override suspend fun patchBucket(id: String, data: RequestCart): NetworkResult<ResponseCart> = safeApiCall {
+    override suspend fun patchBucket(id: String, data: RequestCart) = safeApiCall {
         api.patchBucket(id,data)
     }
 
-    override suspend fun patchUser(id: String, data: RequestUser): NetworkResult<User> = safeApiCall {
+    override suspend fun patchUser(id: String, data: RequestUser) = safeApiCall {
         api.patchUser(id,data)
     }
 
-    override suspend fun postBucket(data: RequestCart): NetworkResult<ResponseCart> = safeApiCall {
+    override suspend fun postBucket(data: RequestCart) = safeApiCall {
         api.postBucket(data)
     }
 
-    override suspend fun postOrder(data: RequestOrder): NetworkResult<ResponseOrder> = safeApiCall {
+    override suspend fun postOrder(data: RequestOrder) = safeApiCall {
         api.postOrder(data)
     }
 
-    override suspend fun postProject(token:String, data: RequestProject): NetworkResult<Project> = safeApiCall {
+    override suspend fun postProject(token:String, data: RequestProject) = safeApiCall {
         api.postProject(token, data)
     }
 
-    override suspend fun postUser(data: RequestRegister): NetworkResult<ResponseRegister> = safeApiCall {
+    override suspend fun postUser(data: RequestRegister) = safeApiCall {
         api.postUser(data)
     }
 }

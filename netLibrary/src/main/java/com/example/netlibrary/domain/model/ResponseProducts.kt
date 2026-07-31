@@ -6,8 +6,8 @@ import kotlinx.serialization.Serializable
 
 data class ResponseProducts(
     val page: Int,
-    val perPages:Int,
-    val totalPage:Int,
+    val perPage:Int,
+    val totalPages:Int,
     val totalItems:Int,
     val items: List<ProductItem>
 )

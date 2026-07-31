@@ -8,5 +8,5 @@ data class UsersAuth(
     val perPage:Int,
     val totalPages: Int,
     val totalItems:Int,
-    val item: List<UserAuth>
+    val items: List<UserAuth>
 )
