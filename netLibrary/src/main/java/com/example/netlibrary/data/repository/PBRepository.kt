@@ -14,6 +14,7 @@ import com.example.netlibrary.domain.model.RequestRegister
 import com.example.netlibrary.domain.model.RequestUser
 import com.example.netlibrary.domain.model.ResponseAuth
 import com.example.netlibrary.domain.model.ResponseCart
+import com.example.netlibrary.domain.model.ResponseCarts
 import com.example.netlibrary.domain.model.ResponseOrder
 import com.example.netlibrary.domain.model.ResponseProducts
 import com.example.netlibrary.domain.model.ResponseRegister
@@ -22,6 +23,7 @@ import com.example.netlibrary.domain.model.ResponsesProject
 import com.example.netlibrary.domain.model.User
 import com.example.netlibrary.domain.model.UsersAuth
 import com.example.netlibrary.domain.repository.Repository
+import com.example.netlibrary.network.IsConnect
 import com.example.netlibrary.network.NetworkMonitor
 import io.ktor.client.call.body
 import io.ktor.client.plugins.ClientRequestException
@@ -31,7 +33,7 @@ import okio.IOException
 
 class PBRepository(
     private val api: PBApi,
-    private val networkMonitor: NetworkMonitor,
+    private val networkMonitor: IsConnect,
     private val context: Context
 ): Repository {
 
@@ -121,5 +123,17 @@ class PBRepository(
 
     override suspend fun postUser(data: RequestRegister) = safeApiCall {
         api.postUser(data)
+    }
+
+    override fun getImageUrl(collection: String, id: String, image: String): String {
+       return api.getImageUrl(collection,id,image)
+    }
+
+    override suspend fun getBucket(filter: String?) = safeApiCall{
+        api.getBucket(filter)
+    }
+
+    override suspend fun deleteBucket(id: String?): NetworkResult<Unit> = safeApiCall{
+        api.deleteBucket(id)
     }
 }

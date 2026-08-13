@@ -122,7 +122,8 @@ class PBApiTest {
                 lastname = "Test",
                 secondname = "User",
                 datebirthday = "2000-01-01",
-                gender = "male"
+                gender = "male",
+                phone = ""
             )
         )
 

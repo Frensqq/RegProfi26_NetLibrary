@@ -13,6 +13,7 @@ data class User(
     val firstname: String,
     val lastname: String,
     val secondname: String,
+    val phone: String,
     val verified: Boolean,
     val datebirthday: String,
     val gender: String

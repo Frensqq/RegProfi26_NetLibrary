@@ -8,6 +8,7 @@ data class RequestUser(
     val emailVisibility: Boolean,
     val firstname: String,
     val lastname: String,
+    val phone: String,
     val secondname: String,
     val datebirthday: String,
     val gender: String

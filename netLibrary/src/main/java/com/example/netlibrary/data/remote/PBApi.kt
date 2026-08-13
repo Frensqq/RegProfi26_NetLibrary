@@ -1,5 +1,6 @@
 package com.example.netlibrary.data.remote
 
+import com.example.netlibrary.data.remote.PBApiServis.BASE_URL
 import com.example.netlibrary.domain.model.*
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -83,6 +84,16 @@ class PBApi(
     suspend fun postOrder(data: RequestOrder): ResponseOrder =
         post("collections/orders/records", data)
 
-    suspend fun getOrders(filter: String?): ResponseOrder =
+    suspend fun getOrders(filter: String?): ResponseCarts =
         get("collections/orders/records", filter)
+
+    suspend fun getBucket(filter: String?): ResponseCarts =
+        get("collections/cart/records", filter)
+
+    suspend fun deleteBucket(id: String?) {
+        client.delete("collections/cart/records/$id")
+    }
+
+    fun getImageUrl(collection: String, id: String,image: String ): String =
+        BASE_URL+ "files/$collection/$id/$image"
 }

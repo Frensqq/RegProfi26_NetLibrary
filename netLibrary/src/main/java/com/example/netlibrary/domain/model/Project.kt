@@ -16,6 +16,7 @@ data class Project(
     val gender: String,
     val description_source: String,
     val category: String,
+    val typeProject: String,
     val image: String,
     val user_id: String
 )

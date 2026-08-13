@@ -11,6 +11,7 @@ import com.example.netlibrary.domain.model.RequestRegister
 import com.example.netlibrary.domain.model.RequestUser
 import com.example.netlibrary.domain.model.ResponseAuth
 import com.example.netlibrary.domain.model.ResponseCart
+import com.example.netlibrary.domain.model.ResponseCarts
 import com.example.netlibrary.domain.model.ResponseOrder
 import com.example.netlibrary.domain.model.ResponseProducts
 import com.example.netlibrary.domain.model.ResponseRegister
@@ -49,6 +50,12 @@ interface Repository
     suspend fun patchBucket(id:String, data: RequestCart): NetworkResult<ResponseCart>
     suspend fun postOrder(data: RequestOrder): NetworkResult<ResponseOrder>
 
-    suspend fun getOrders(filter: String? = null): NetworkResult<ResponseOrder>
+    suspend fun getOrders(filter: String? = null): NetworkResult<ResponseCarts>
 
-}
+    fun getImageUrl(collection: String, id: String,image: String ): String
+
+    suspend fun getBucket(filter: String?): NetworkResult<ResponseCarts>
+
+    suspend fun deleteBucket(id: String?) : NetworkResult<Unit>
+
+    }
