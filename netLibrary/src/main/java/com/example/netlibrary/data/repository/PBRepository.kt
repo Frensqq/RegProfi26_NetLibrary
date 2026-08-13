@@ -22,6 +22,12 @@ import com.example.netlibrary.domain.model.ResponsesNews
 import com.example.netlibrary.domain.model.ResponsesProject
 import com.example.netlibrary.domain.model.User
 import com.example.netlibrary.domain.model.UsersAuth
+import com.example.netlibrary.domain.model.changePassword.OTPAuthRequest
+import com.example.netlibrary.domain.model.changePassword.OTPAuthResponse
+import com.example.netlibrary.domain.model.changePassword.PasswordResetRequest
+import com.example.netlibrary.domain.model.changePassword.RequestChangePass
+import com.example.netlibrary.domain.model.changePassword.RequestOtp
+import com.example.netlibrary.domain.model.changePassword.ResponseOtp
 import com.example.netlibrary.domain.repository.Repository
 import com.example.netlibrary.network.IsConnect
 import com.example.netlibrary.network.NetworkMonitor
@@ -135,5 +141,21 @@ class PBRepository(
 
     override suspend fun deleteBucket(id: String?): NetworkResult<Unit> = safeApiCall{
         api.deleteBucket(id)
+    }
+
+    override suspend fun OtpAuth(data: OTPAuthRequest) = safeApiCall{
+        api.OtpAuth(data)
+    }
+
+    override suspend fun OtpRequest(data: RequestOtp)= safeApiCall {
+        api.OtpRequest(data)
+    }
+
+    override suspend fun ResetPass(data: PasswordResetRequest)= safeApiCall{
+        api.ResetPass(data)
+    }
+
+    override suspend fun patchPass(id: String, data: RequestChangePass): NetworkResult<User> =safeApiCall{
+        api.patchPass(id,data)
     }
 }

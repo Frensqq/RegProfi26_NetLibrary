@@ -19,6 +19,12 @@ import com.example.netlibrary.domain.model.ResponsesNews
 import com.example.netlibrary.domain.model.ResponsesProject
 import com.example.netlibrary.domain.model.User
 import com.example.netlibrary.domain.model.UsersAuth
+import com.example.netlibrary.domain.model.changePassword.OTPAuthRequest
+import com.example.netlibrary.domain.model.changePassword.OTPAuthResponse
+import com.example.netlibrary.domain.model.changePassword.PasswordResetRequest
+import com.example.netlibrary.domain.model.changePassword.RequestChangePass
+import com.example.netlibrary.domain.model.changePassword.RequestOtp
+import com.example.netlibrary.domain.model.changePassword.ResponseOtp
 
 
 interface Repository
@@ -58,4 +64,13 @@ interface Repository
 
     suspend fun deleteBucket(id: String?) : NetworkResult<Unit>
 
-    }
+    suspend fun OtpRequest(data: RequestOtp): NetworkResult<ResponseOtp>
+
+    suspend fun OtpAuth(data: OTPAuthRequest): NetworkResult<OTPAuthResponse>
+
+    suspend fun ResetPass(data: PasswordResetRequest): NetworkResult<Unit>
+
+    suspend fun patchPass(id: String,data: RequestChangePass): NetworkResult<User>
+
+
+}

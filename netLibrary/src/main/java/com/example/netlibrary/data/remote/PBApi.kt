@@ -2,6 +2,12 @@ package com.example.netlibrary.data.remote
 
 import com.example.netlibrary.data.remote.PBApiServis.BASE_URL
 import com.example.netlibrary.domain.model.*
+import com.example.netlibrary.domain.model.changePassword.OTPAuthRequest
+import com.example.netlibrary.domain.model.changePassword.OTPAuthResponse
+import com.example.netlibrary.domain.model.changePassword.PasswordResetRequest
+import com.example.netlibrary.domain.model.changePassword.RequestChangePass
+import com.example.netlibrary.domain.model.changePassword.RequestOtp
+import com.example.netlibrary.domain.model.changePassword.ResponseOtp
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.*
@@ -96,4 +102,20 @@ class PBApi(
 
     fun getImageUrl(collection: String, id: String,image: String ): String =
         BASE_URL+ "files/$collection/$id/$image"
+
+
+    //password change
+
+    suspend fun OtpRequest(data: RequestOtp): ResponseOtp =
+        post("collections/users/request-otp", data)
+
+    suspend fun OtpAuth(data: OTPAuthRequest): OTPAuthResponse =
+        post("collections/users/auth-with-otp", data)
+
+    suspend fun ResetPass(data: PasswordResetRequest): Unit =
+        post("collections/users/confirm-password-reset", data)
+
+    suspend fun patchPass(id: String,data: RequestChangePass): User =
+        patch("collections/users/records/$id", data)
+
 }
